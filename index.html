@@ -191,6 +191,14 @@
             font-size: 0.85rem;
         }
         .btn-danger:hover { background: #fef2f2; }
+        .btn-secondary {
+            background: #f1f5f9;
+            color: var(--text);
+            border: 1px solid var(--border);
+            padding: 8px 16px;
+            font-size: 0.85rem;
+        }
+        .btn-secondary:hover { background: #e2e8f0; }
 
         .totals-box {
             background: #f1f5f9;
@@ -243,6 +251,100 @@
         .feature-icon { font-size: 2rem; margin-bottom: 8px; }
         .feature h4 { font-size: 0.95rem; margin-bottom: 4px; }
         .feature p { font-size: 0.85rem; color: var(--text-light); }
+
+        /* Logo upload */
+        .logo-upload {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+        .logo-preview {
+            width: 80px;
+            height: 80px;
+            border: 2px dashed var(--border);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            cursor: pointer;
+            position: relative;
+            flex-shrink: 0;
+        }
+        .logo-preview img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+        }
+        .logo-preview .placeholder {
+            color: var(--text-light);
+            font-size: 0.75rem;
+            text-align: center;
+            padding: 4px;
+        }
+        .logo-preview:hover { border-color: var(--primary); }
+
+        /* Template chips */
+        .template-chips {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+        .template-chip {
+            padding: 6px 14px;
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            font-size: 0.85rem;
+            cursor: pointer;
+            background: white;
+            transition: all 0.2s;
+        }
+        .template-chip:hover {
+            border-color: var(--primary);
+            background: var(--primary-light);
+        }
+        .template-chip.active {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+
+        /* Save defaults toast */
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: var(--success);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            opacity: 0;
+            transform: translateY(10px);
+            transition: all 0.3s;
+            z-index: 1000;
+        }
+        .toast.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* Card header with actions */
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid var(--primary-light);
+        }
+        .card-header h3 {
+            margin: 0;
+            padding: 0;
+            border: none;
+        }
     </style>
 </head>
 <body>
@@ -284,7 +386,25 @@
 
         <!-- Your Company Info -->
         <div class="card">
-            <h3>Your Company</h3>
+            <div class="card-header">
+                <h3>Your Company</h3>
+                <button class="btn btn-secondary" onclick="saveCompanyDefaults(true)">Save as Default</button>
+            </div>
+
+            <!-- Logo Upload -->
+            <div class="logo-upload">
+                <div class="logo-preview" onclick="document.getElementById('logo-input').click()">
+                    <span class="placeholder" id="logo-placeholder">Click to add logo</span>
+                    <img id="logo-img" style="display:none;">
+                </div>
+                <div>
+                    <label style="margin-bottom:2px;">Company Logo</label>
+                    <p style="font-size:0.8rem;color:var(--text-light);margin:0;">Appears on your PDF. PNG or JPG, max 500KB.</p>
+                    <input type="file" id="logo-input" accept="image/png,image/jpeg,image/gif,image/webp" style="display:none" onchange="handleLogoUpload(event)">
+                    <button class="btn btn-danger" id="logo-remove-btn" style="display:none;margin-top:4px;font-size:0.75rem;" onclick="removeLogo()">Remove Logo</button>
+                </div>
+            </div>
+
             <div class="form-row">
                 <div>
                     <label for="company-name">Company Name *</label>
@@ -341,6 +461,20 @@
         <!-- Proposal Details -->
         <div class="card">
             <h3>Proposal Details</h3>
+
+            <!-- Trade-specific templates -->
+            <label style="margin-bottom:8px;">Quick Start Templates</label>
+            <div class="template-chips">
+                <span class="template-chip" onclick="loadTemplate('hvac-install')">HVAC Install</span>
+                <span class="template-chip" onclick="loadTemplate('hvac-repair')">HVAC Repair</span>
+                <span class="template-chip" onclick="loadTemplate('plumbing')">Plumbing</span>
+                <span class="template-chip" onclick="loadTemplate('electrical')">Electrical</span>
+                <span class="template-chip" onclick="loadTemplate('roofing')">Roofing</span>
+                <span class="template-chip" onclick="loadTemplate('painting')">Painting</span>
+                <span class="template-chip" onclick="loadTemplate('general')">General</span>
+                <span class="template-chip" onclick="loadTemplate('blank')">Blank</span>
+            </div>
+
             <div class="form-row">
                 <div>
                     <label for="proposal-number">Proposal #</label>
@@ -460,20 +594,121 @@
     </div>
 </footer>
 
+<!-- Toast notification -->
+<div class="toast" id="toast"></div>
+
 <script>
+// Trade-specific templates
+const TEMPLATES = {
+    'hvac-install': {
+        trade: 'HVAC',
+        title: 'HVAC System Installation',
+        scope: 'Remove and dispose of existing HVAC system. Install new high-efficiency system including indoor and outdoor units, refrigerant line set, thermostat, and condensate drain. Perform system startup, charge verification, and airflow balancing. Includes all necessary permits and inspections.',
+        items: [
+            { desc: 'HVAC Unit (Condenser + Air Handler)', qty: 1, rate: 0 },
+            { desc: 'Thermostat', qty: 1, rate: 0 },
+            { desc: 'Copper Line Set', qty: 1, rate: 0 },
+            { desc: 'Condensate Drain Kit', qty: 1, rate: 0 },
+            { desc: 'Permits & Inspections', qty: 1, rate: 0 },
+            { desc: 'Labor - Installation', qty: 1, rate: 0 },
+            { desc: 'Disposal of Old Equipment', qty: 1, rate: 0 }
+        ],
+        terms: 'Payment due upon completion unless otherwise agreed. All work guaranteed for 1 year parts and labor from date of completion. Manufacturer warranty applies separately. Customer responsible for providing clear access to work area including attic/crawlspace. Any additional work beyond the scope described above will require a separate estimate and approval. Permit fees included.'
+    },
+    'hvac-repair': {
+        trade: 'HVAC',
+        title: 'HVAC System Repair',
+        scope: 'Diagnose and repair HVAC system malfunction. Includes system inspection, component testing, repair or replacement of faulty parts, and system performance verification.',
+        items: [
+            { desc: 'Diagnostic / Service Call', qty: 1, rate: 0 },
+            { desc: 'Replacement Parts', qty: 1, rate: 0 },
+            { desc: 'Refrigerant (per lb)', qty: 1, rate: 0 },
+            { desc: 'Labor - Repair', qty: 1, rate: 0 }
+        ],
+        terms: 'Payment due upon completion. Repair work guaranteed for 90 days. Parts covered by manufacturer warranty where applicable. If additional issues are found during repair, customer will be notified before proceeding with additional work.'
+    },
+    'plumbing': {
+        trade: 'Plumbing',
+        title: 'Plumbing Service',
+        scope: 'Provide plumbing services as described below. All work performed to local code standards. Includes cleanup of work area upon completion.',
+        items: [
+            { desc: 'Fixtures & Materials', qty: 1, rate: 0 },
+            { desc: 'Pipe & Fittings', qty: 1, rate: 0 },
+            { desc: 'Labor', qty: 1, rate: 0 },
+            { desc: 'Permit (if required)', qty: 1, rate: 0 }
+        ],
+        terms: 'Payment due upon completion unless otherwise agreed. All work guaranteed for 1 year from date of completion. Emergency callbacks within warranty period at no charge. Customer responsible for providing clear access to plumbing. Any additional work beyond scope requires separate approval.'
+    },
+    'electrical': {
+        trade: 'Electrical',
+        title: 'Electrical Service',
+        scope: 'Provide electrical services as described below. All work performed to NEC standards and local code requirements. Includes system testing and verification upon completion.',
+        items: [
+            { desc: 'Electrical Materials & Components', qty: 1, rate: 0 },
+            { desc: 'Wire & Conduit', qty: 1, rate: 0 },
+            { desc: 'Labor', qty: 1, rate: 0 },
+            { desc: 'Permit & Inspection', qty: 1, rate: 0 }
+        ],
+        terms: 'Payment due upon completion unless otherwise agreed. All work guaranteed for 1 year from date of completion. Work performed by licensed electrician to NEC and local code standards. Customer responsible for providing clear access to electrical panels and work areas.'
+    },
+    'roofing': {
+        trade: 'Roofing',
+        title: 'Roofing Service',
+        scope: 'Provide roofing services as described below. Includes removal of old materials, installation of new materials, and cleanup including magnetic nail sweep of property.',
+        items: [
+            { desc: 'Roofing Materials (shingles/membrane)', qty: 1, rate: 0 },
+            { desc: 'Underlayment & Ice Shield', qty: 1, rate: 0 },
+            { desc: 'Flashing & Trim', qty: 1, rate: 0 },
+            { desc: 'Tear-off & Disposal', qty: 1, rate: 0 },
+            { desc: 'Labor', qty: 1, rate: 0 },
+            { desc: 'Permit', qty: 1, rate: 0 }
+        ],
+        terms: 'Payment: 50% deposit, balance due upon completion. Workmanship guaranteed for 5 years. Material warranties per manufacturer specifications. Price includes dumpster, cleanup, and magnetic nail sweep. Weather delays may affect schedule.'
+    },
+    'painting': {
+        trade: 'Painting',
+        title: 'Painting Service',
+        scope: 'Provide professional painting services as described below. Includes surface preparation, priming where needed, and application of finish coats. All furniture and floors protected during work.',
+        items: [
+            { desc: 'Paint & Primer', qty: 1, rate: 0 },
+            { desc: 'Surface Preparation', qty: 1, rate: 0 },
+            { desc: 'Caulking & Patching', qty: 1, rate: 0 },
+            { desc: 'Labor - Painting', qty: 1, rate: 0 }
+        ],
+        terms: 'Payment due upon completion unless otherwise agreed. Work guaranteed for 2 years against peeling, blistering, or flaking under normal conditions. Customer to approve paint colors before work begins. Furniture moving is not included unless noted.'
+    },
+    'general': {
+        trade: 'General Contracting',
+        title: 'General Contracting Service',
+        scope: 'Provide contracting services as described below. All work performed to applicable building codes and standards.',
+        items: [
+            { desc: 'Materials', qty: 1, rate: 0 },
+            { desc: 'Labor', qty: 1, rate: 0 },
+            { desc: 'Permit (if required)', qty: 1, rate: 0 }
+        ],
+        terms: 'Payment due upon completion unless otherwise agreed. All work guaranteed for 1 year from date of completion. Customer responsible for providing clear access to work area. Any additional work beyond the scope described above will require a separate estimate and approval.'
+    },
+    'blank': {
+        trade: 'Other',
+        title: '',
+        scope: '',
+        items: [
+            { desc: '', qty: 1, rate: 0 },
+            { desc: '', qty: 1, rate: 0 }
+        ],
+        terms: 'Payment due upon completion unless otherwise agreed. All work guaranteed for 1 year from date of completion. Customer responsible for providing clear access to work area. Any additional work beyond the scope described above will require a separate estimate and approval.'
+    }
+};
+
+// Logo state
+let companyLogo = null; // base64 data URL
+
 // Initialize
 document.addEventListener('DOMContentLoaded', function() {
-    // Set today's date
     document.getElementById('proposal-date').value = new Date().toISOString().split('T')[0];
-
-    // Add initial line items
     addLineItem('Equipment / Materials', 1, 0);
     addLineItem('Labor', 1, 0);
-
-    // Load saved company info from localStorage
     loadCompanyDefaults();
-
-    // Tax rate change recalculates
     document.getElementById('tax-rate').addEventListener('input', recalculate);
 });
 
@@ -524,6 +759,76 @@ function recalculate() {
     document.getElementById('grand-total').textContent = '$' + grandTotal.toFixed(2);
 }
 
+// Logo handling
+function handleLogoUpload(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    if (file.size > 500 * 1024) {
+        alert('Logo must be under 500KB. Please use a smaller image.');
+        return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        companyLogo = e.target.result;
+        document.getElementById('logo-img').src = companyLogo;
+        document.getElementById('logo-img').style.display = 'block';
+        document.getElementById('logo-placeholder').style.display = 'none';
+        document.getElementById('logo-remove-btn').style.display = 'inline-flex';
+    };
+    reader.readAsDataURL(file);
+}
+
+function removeLogo() {
+    companyLogo = null;
+    document.getElementById('logo-img').style.display = 'none';
+    document.getElementById('logo-img').src = '';
+    document.getElementById('logo-placeholder').style.display = 'block';
+    document.getElementById('logo-remove-btn').style.display = 'none';
+    document.getElementById('logo-input').value = '';
+    // Remove from localStorage too
+    localStorage.removeItem('quotecraft-logo');
+}
+
+// Template loading
+function loadTemplate(key) {
+    const template = TEMPLATES[key];
+    if (!template) return;
+
+    // Update active chip
+    document.querySelectorAll('.template-chip').forEach(c => c.classList.remove('active'));
+    event.target.classList.add('active');
+
+    // Set trade
+    const tradeSelect = document.getElementById('proposal-trade');
+    for (let i = 0; i < tradeSelect.options.length; i++) {
+        if (tradeSelect.options[i].value === template.trade) {
+            tradeSelect.selectedIndex = i;
+            break;
+        }
+    }
+
+    // Set title and scope
+    document.getElementById('proposal-title').value = template.title;
+    document.getElementById('proposal-scope').value = template.scope;
+    document.getElementById('terms').value = template.terms;
+
+    // Clear and reload line items
+    document.getElementById('line-items-body').innerHTML = '';
+    lineItemCount = 0;
+    template.items.forEach(item => {
+        addLineItem(item.desc, item.qty, item.rate);
+    });
+
+    // Track template usage
+    if (window.goatcounter) {
+        window.goatcounter.count({ path: '/template-' + key, event: true });
+    }
+
+    showToast('Template loaded: ' + key.replace('-', ' '));
+}
+
 function loadCompanyDefaults() {
     const saved = localStorage.getItem('quotecraft-company');
     if (saved) {
@@ -533,18 +838,45 @@ function loadCompanyDefaults() {
         if (data.email) document.getElementById('company-email').value = data.email;
         if (data.license) document.getElementById('company-license').value = data.license;
         if (data.address) document.getElementById('company-address').value = data.address;
+        if (data.taxRate) document.getElementById('tax-rate').value = data.taxRate;
+    }
+    // Load logo
+    const savedLogo = localStorage.getItem('quotecraft-logo');
+    if (savedLogo) {
+        companyLogo = savedLogo;
+        document.getElementById('logo-img').src = companyLogo;
+        document.getElementById('logo-img').style.display = 'block';
+        document.getElementById('logo-placeholder').style.display = 'none';
+        document.getElementById('logo-remove-btn').style.display = 'inline-flex';
     }
 }
 
-function saveCompanyDefaults() {
+function saveCompanyDefaults(showNotification) {
     const data = {
         name: document.getElementById('company-name').value,
         phone: document.getElementById('company-phone').value,
         email: document.getElementById('company-email').value,
         license: document.getElementById('company-license').value,
-        address: document.getElementById('company-address').value
+        address: document.getElementById('company-address').value,
+        taxRate: document.getElementById('tax-rate').value
     };
     localStorage.setItem('quotecraft-company', JSON.stringify(data));
+
+    // Save logo separately (can be large)
+    if (companyLogo) {
+        localStorage.setItem('quotecraft-logo', companyLogo);
+    }
+
+    if (showNotification) {
+        showToast('Company defaults saved!');
+    }
+}
+
+function showToast(message) {
+    const toast = document.getElementById('toast');
+    toast.textContent = message;
+    toast.classList.add('show');
+    setTimeout(() => toast.classList.remove('show'), 2500);
 }
 
 function getLineItems() {
@@ -576,7 +908,7 @@ function generatePDF() {
     }
 
     // Save company info for next time
-    saveCompanyDefaults();
+    saveCompanyDefaults(false);
 
     // Gather data
     const companyPhone = document.getElementById('company-phone').value;
@@ -608,20 +940,52 @@ function generatePDF() {
     const margin = 20;
     let y = 20;
 
-    // Header - Company Name
-    doc.setFontSize(22);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(26, 86, 219); // Primary blue
-    doc.text(companyName.toUpperCase(), margin, y);
-    y += 8;
+    // Logo + Header
+    if (companyLogo) {
+        try {
+            doc.addImage(companyLogo, 'AUTO', margin, y - 5, 30, 30);
+            // Company name next to logo
+            doc.setFontSize(22);
+            doc.setFont('helvetica', 'bold');
+            doc.setTextColor(26, 86, 219);
+            doc.text(companyName.toUpperCase(), margin + 35, y + 8);
 
-    // Company details line
-    doc.setFontSize(9);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(100, 116, 139);
-    const companyDetails = [companyAddress, companyPhone, companyEmail, companyLicense ? 'Lic# ' + companyLicense : ''].filter(Boolean).join('  |  ');
-    doc.text(companyDetails, margin, y);
-    y += 4;
+            // Company details
+            doc.setFontSize(9);
+            doc.setFont('helvetica', 'normal');
+            doc.setTextColor(100, 116, 139);
+            const companyDetails = [companyAddress, companyPhone, companyEmail, companyLicense ? 'Lic# ' + companyLicense : ''].filter(Boolean).join('  |  ');
+            const detailLines = doc.splitTextToSize(companyDetails, pageWidth - margin - (margin + 35));
+            doc.text(detailLines, margin + 35, y + 14);
+            y += 30;
+        } catch(e) {
+            // Fallback: render without logo
+            doc.setFontSize(22);
+            doc.setFont('helvetica', 'bold');
+            doc.setTextColor(26, 86, 219);
+            doc.text(companyName.toUpperCase(), margin, y);
+            y += 8;
+            doc.setFontSize(9);
+            doc.setFont('helvetica', 'normal');
+            doc.setTextColor(100, 116, 139);
+            const companyDetails = [companyAddress, companyPhone, companyEmail, companyLicense ? 'Lic# ' + companyLicense : ''].filter(Boolean).join('  |  ');
+            doc.text(companyDetails, margin, y);
+            y += 4;
+        }
+    } else {
+        doc.setFontSize(22);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(26, 86, 219);
+        doc.text(companyName.toUpperCase(), margin, y);
+        y += 8;
+
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(100, 116, 139);
+        const companyDetails = [companyAddress, companyPhone, companyEmail, companyLicense ? 'Lic# ' + companyLicense : ''].filter(Boolean).join('  |  ');
+        doc.text(companyDetails, margin, y);
+        y += 4;
+    }
 
     // Divider
     doc.setDrawColor(26, 86, 219);
@@ -759,7 +1123,6 @@ function generatePDF() {
 
     // Terms
     if (terms) {
-        // Check if we need a new page
         if (y > 240) { doc.addPage(); y = 20; }
 
         doc.setFontSize(9);
@@ -799,14 +1162,12 @@ function generatePDF() {
     doc.setDrawColor(200, 200, 200);
     doc.setLineWidth(0.5);
 
-    // Customer signature
     doc.line(margin, y + 20, margin + 70, y + 20);
     doc.setFontSize(8);
     doc.setTextColor(100, 116, 139);
     doc.text('Customer Signature', margin, y + 26);
     doc.text('Date: _______________', margin, y + 32);
 
-    // Contractor signature
     doc.line(pageWidth / 2 + 10, y + 20, pageWidth / 2 + 80, y + 20);
     doc.text('Contractor Signature', pageWidth / 2 + 10, y + 26);
     doc.text('Date: _______________', pageWidth / 2 + 10, y + 32);
