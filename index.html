@@ -1,0 +1,831 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QuoteCraft — Free Contractor Proposal Generator</title>
+    <meta name="description" content="Create professional contractor proposals and quotes in minutes. Free PDF generator for HVAC, plumbing, electrical, and general contractors. No signup required.">
+    <meta name="keywords" content="contractor proposal generator, HVAC quote template, plumbing estimate, electrical bid, free proposal maker, contractor invoice, job estimate PDF">
+
+    <!-- Open Graph -->
+    <meta property="og:title" content="QuoteCraft — Free Contractor Proposal Generator">
+    <meta property="og:description" content="Create professional contractor proposals in minutes. Free PDF generator for HVAC, plumbing, electrical contractors.">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://austinkc91.github.io/quotecraft/">
+
+    <!-- JSON-LD -->
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "QuoteCraft",
+        "description": "Free contractor proposal and quote generator. Create professional PDF proposals for HVAC, plumbing, electrical, and general contracting jobs.",
+        "url": "https://austinkc91.github.io/quotecraft/",
+        "applicationCategory": "BusinessApplication",
+        "operatingSystem": "Any",
+        "offers": {
+            "@type": "Offer",
+            "price": "0",
+            "priceCurrency": "USD"
+        }
+    }
+    </script>
+
+    <!-- jsPDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.2/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+
+    <!-- GoatCounter -->
+    <script data-goatcounter="https://textforge-tools.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
+
+    <style>
+        :root {
+            --primary: #1a56db;
+            --primary-dark: #1e40af;
+            --primary-light: #dbeafe;
+            --success: #059669;
+            --bg: #f8fafc;
+            --card: #ffffff;
+            --text: #1e293b;
+            --text-light: #64748b;
+            --border: #e2e8f0;
+            --radius: 8px;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+        }
+
+        .container { max-width: 900px; margin: 0 auto; padding: 0 20px; }
+
+        header {
+            background: var(--primary);
+            color: white;
+            padding: 24px 0;
+            text-align: center;
+        }
+        header h1 { font-size: 2rem; margin-bottom: 4px; }
+        header p { opacity: 0.9; font-size: 1.05rem; }
+
+        .hero {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white;
+            padding: 40px 0 32px;
+            text-align: center;
+        }
+        .hero h2 { font-size: 1.5rem; margin-bottom: 8px; font-weight: 600; }
+        .hero p { opacity: 0.85; max-width: 600px; margin: 0 auto; }
+
+        main { padding: 32px 0 60px; }
+
+        .card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 24px;
+            margin-bottom: 20px;
+        }
+        .card h3 {
+            font-size: 1.1rem;
+            margin-bottom: 16px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid var(--primary-light);
+            color: var(--primary-dark);
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+        .form-row.three { grid-template-columns: 1fr 1fr 1fr; }
+        .form-row.full { grid-template-columns: 1fr; }
+
+        @media (max-width: 600px) {
+            .form-row, .form-row.three { grid-template-columns: 1fr; }
+        }
+
+        label {
+            display: block;
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-bottom: 4px;
+            color: var(--text-light);
+        }
+        input, select, textarea {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font-size: 0.95rem;
+            font-family: inherit;
+            transition: border-color 0.2s;
+        }
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px var(--primary-light);
+        }
+        textarea { resize: vertical; min-height: 80px; }
+
+        /* Line Items */
+        #line-items-table { width: 100%; border-collapse: collapse; margin-bottom: 12px; }
+        #line-items-table th {
+            text-align: left;
+            padding: 8px;
+            font-size: 0.8rem;
+            color: var(--text-light);
+            border-bottom: 1px solid var(--border);
+        }
+        #line-items-table td { padding: 6px 8px; }
+        #line-items-table input { padding: 8px; font-size: 0.9rem; }
+        .col-desc { width: 40%; }
+        .col-qty { width: 12%; }
+        .col-rate { width: 18%; }
+        .col-total { width: 18%; }
+        .col-action { width: 12%; text-align: center; }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+        .btn-primary:hover { background: var(--primary-dark); }
+        .btn-success {
+            background: var(--success);
+            color: white;
+            font-size: 1.1rem;
+            padding: 14px 32px;
+        }
+        .btn-success:hover { background: #047857; }
+        .btn-outline {
+            background: transparent;
+            color: var(--primary);
+            border: 1px solid var(--primary);
+            padding: 6px 12px;
+            font-size: 0.85rem;
+        }
+        .btn-outline:hover { background: var(--primary-light); }
+        .btn-danger {
+            background: transparent;
+            color: #dc2626;
+            border: none;
+            padding: 4px 8px;
+            font-size: 0.85rem;
+        }
+        .btn-danger:hover { background: #fef2f2; }
+
+        .totals-box {
+            background: #f1f5f9;
+            border-radius: 6px;
+            padding: 16px;
+            max-width: 300px;
+            margin-left: auto;
+        }
+        .totals-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 4px 0;
+            font-size: 0.95rem;
+        }
+        .totals-row.grand {
+            font-weight: 700;
+            font-size: 1.1rem;
+            border-top: 2px solid var(--border);
+            padding-top: 8px;
+            margin-top: 4px;
+        }
+
+        .generate-section {
+            text-align: center;
+            padding: 24px 0;
+        }
+
+        footer {
+            text-align: center;
+            padding: 24px 0;
+            color: var(--text-light);
+            font-size: 0.85rem;
+            border-top: 1px solid var(--border);
+        }
+        footer a { color: var(--primary); text-decoration: none; }
+
+        .features {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+            margin: 24px 0;
+        }
+        @media (max-width: 600px) {
+            .features { grid-template-columns: 1fr; }
+        }
+        .feature {
+            text-align: center;
+            padding: 16px;
+        }
+        .feature-icon { font-size: 2rem; margin-bottom: 8px; }
+        .feature h4 { font-size: 0.95rem; margin-bottom: 4px; }
+        .feature p { font-size: 0.85rem; color: var(--text-light); }
+    </style>
+</head>
+<body>
+
+<header>
+    <div class="container">
+        <h1>QuoteCraft</h1>
+        <p>Professional Contractor Proposals in Minutes</p>
+    </div>
+</header>
+
+<div class="hero">
+    <div class="container">
+        <h2>Create Beautiful Proposals. Win More Jobs.</h2>
+        <p>Fill in your details, add line items, and download a professional PDF proposal. Free, no signup required.</p>
+    </div>
+</div>
+
+<main>
+    <div class="container">
+
+        <div class="features">
+            <div class="feature">
+                <div class="feature-icon">&#9889;</div>
+                <h4>Ready in 2 Minutes</h4>
+                <p>Fill in the form, click generate. That's it.</p>
+            </div>
+            <div class="feature">
+                <div class="feature-icon">&#128196;</div>
+                <h4>Professional PDFs</h4>
+                <p>Clean, branded proposals your customers will trust.</p>
+            </div>
+            <div class="feature">
+                <div class="feature-icon">&#128274;</div>
+                <h4>100% Private</h4>
+                <p>Everything runs in your browser. We never see your data.</p>
+            </div>
+        </div>
+
+        <!-- Your Company Info -->
+        <div class="card">
+            <h3>Your Company</h3>
+            <div class="form-row">
+                <div>
+                    <label for="company-name">Company Name *</label>
+                    <input type="text" id="company-name" placeholder="ABC Heating & Cooling">
+                </div>
+                <div>
+                    <label for="company-phone">Phone</label>
+                    <input type="tel" id="company-phone" placeholder="(555) 123-4567">
+                </div>
+            </div>
+            <div class="form-row">
+                <div>
+                    <label for="company-email">Email</label>
+                    <input type="email" id="company-email" placeholder="info@abcheating.com">
+                </div>
+                <div>
+                    <label for="company-license">License #</label>
+                    <input type="text" id="company-license" placeholder="HVAC-12345">
+                </div>
+            </div>
+            <div class="form-row full">
+                <div>
+                    <label for="company-address">Address</label>
+                    <input type="text" id="company-address" placeholder="123 Main St, Anytown, TX 75020">
+                </div>
+            </div>
+        </div>
+
+        <!-- Customer Info -->
+        <div class="card">
+            <h3>Customer</h3>
+            <div class="form-row">
+                <div>
+                    <label for="customer-name">Customer Name *</label>
+                    <input type="text" id="customer-name" placeholder="John Smith">
+                </div>
+                <div>
+                    <label for="customer-phone">Phone</label>
+                    <input type="tel" id="customer-phone" placeholder="(555) 987-6543">
+                </div>
+            </div>
+            <div class="form-row">
+                <div>
+                    <label for="customer-email">Email</label>
+                    <input type="email" id="customer-email" placeholder="john@example.com">
+                </div>
+                <div>
+                    <label for="customer-address">Service Address</label>
+                    <input type="text" id="customer-address" placeholder="456 Oak Ave, Anytown, TX 75020">
+                </div>
+            </div>
+        </div>
+
+        <!-- Proposal Details -->
+        <div class="card">
+            <h3>Proposal Details</h3>
+            <div class="form-row">
+                <div>
+                    <label for="proposal-number">Proposal #</label>
+                    <input type="text" id="proposal-number" placeholder="QC-001">
+                </div>
+                <div>
+                    <label for="proposal-date">Date</label>
+                    <input type="date" id="proposal-date">
+                </div>
+            </div>
+            <div class="form-row">
+                <div>
+                    <label for="proposal-valid">Valid For (days)</label>
+                    <input type="number" id="proposal-valid" value="30" min="1">
+                </div>
+                <div>
+                    <label for="proposal-trade">Trade</label>
+                    <select id="proposal-trade">
+                        <option value="HVAC">HVAC</option>
+                        <option value="Plumbing">Plumbing</option>
+                        <option value="Electrical">Electrical</option>
+                        <option value="General Contracting">General Contracting</option>
+                        <option value="Roofing">Roofing</option>
+                        <option value="Painting">Painting</option>
+                        <option value="Landscaping">Landscaping</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-row full">
+                <div>
+                    <label for="proposal-title">Job Title / Summary *</label>
+                    <input type="text" id="proposal-title" placeholder="3-Ton AC System Replacement">
+                </div>
+            </div>
+            <div class="form-row full">
+                <div>
+                    <label for="proposal-scope">Scope of Work</label>
+                    <textarea id="proposal-scope" rows="4" placeholder="Remove existing 2.5-ton Carrier AC unit and replace with new 3-ton Trane XR15 system. Includes new copper line set, thermostat upgrade to Honeywell T6 Pro, and all necessary permits."></textarea>
+                </div>
+            </div>
+        </div>
+
+        <!-- Line Items -->
+        <div class="card">
+            <h3>Line Items</h3>
+            <table id="line-items-table">
+                <thead>
+                    <tr>
+                        <th class="col-desc">Description</th>
+                        <th class="col-qty">Qty</th>
+                        <th class="col-rate">Unit Price</th>
+                        <th class="col-total">Total</th>
+                        <th class="col-action"></th>
+                    </tr>
+                </thead>
+                <tbody id="line-items-body">
+                </tbody>
+            </table>
+            <button class="btn btn-outline" onclick="addLineItem()">+ Add Line Item</button>
+
+            <div style="margin-top: 20px;">
+                <div class="totals-box">
+                    <div class="totals-row">
+                        <span>Subtotal</span>
+                        <span id="subtotal">$0.00</span>
+                    </div>
+                    <div class="totals-row">
+                        <span>
+                            Tax
+                            <input type="number" id="tax-rate" value="0" min="0" max="100" step="0.1"
+                                style="width:50px;padding:2px 4px;display:inline;font-size:0.85rem;">%
+                        </span>
+                        <span id="tax-amount">$0.00</span>
+                    </div>
+                    <div class="totals-row grand">
+                        <span>Total</span>
+                        <span id="grand-total">$0.00</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Terms & Notes -->
+        <div class="card">
+            <h3>Terms & Notes</h3>
+            <div class="form-row full">
+                <div>
+                    <label for="terms">Terms & Conditions</label>
+                    <textarea id="terms" rows="4">Payment due upon completion unless otherwise agreed. All work guaranteed for 1 year from date of completion. Customer responsible for providing clear access to work area. Any additional work beyond the scope described above will require a separate estimate and approval.</textarea>
+                </div>
+            </div>
+            <div class="form-row full">
+                <div>
+                    <label for="notes">Additional Notes</label>
+                    <textarea id="notes" rows="2" placeholder="Thank you for choosing us!"></textarea>
+                </div>
+            </div>
+        </div>
+
+        <!-- Generate Button -->
+        <div class="generate-section">
+            <button class="btn btn-success" onclick="generatePDF()">Download PDF Proposal</button>
+            <p style="margin-top:8px;color:var(--text-light);font-size:0.85rem;">Your data never leaves your browser</p>
+        </div>
+
+    </div>
+</main>
+
+<footer>
+    <div class="container">
+        <p>QuoteCraft &mdash; Free Contractor Proposal Generator</p>
+        <p style="margin-top:4px;">
+            <a href="https://austinkc91.github.io/">More Tools</a> &middot;
+            <a href="https://austinkc91.github.io/text-tools/">Text Tools</a>
+        </p>
+    </div>
+</footer>
+
+<script>
+// Initialize
+document.addEventListener('DOMContentLoaded', function() {
+    // Set today's date
+    document.getElementById('proposal-date').value = new Date().toISOString().split('T')[0];
+
+    // Add initial line items
+    addLineItem('Equipment / Materials', 1, 0);
+    addLineItem('Labor', 1, 0);
+
+    // Load saved company info from localStorage
+    loadCompanyDefaults();
+
+    // Tax rate change recalculates
+    document.getElementById('tax-rate').addEventListener('input', recalculate);
+});
+
+let lineItemCount = 0;
+
+function addLineItem(desc, qty, rate) {
+    lineItemCount++;
+    const id = lineItemCount;
+    const tbody = document.getElementById('line-items-body');
+    const tr = document.createElement('tr');
+    tr.id = 'line-' + id;
+    tr.innerHTML = `
+        <td class="col-desc"><input type="text" id="desc-${id}" value="${desc || ''}" placeholder="Description"></td>
+        <td class="col-qty"><input type="number" id="qty-${id}" value="${qty || 1}" min="0" step="1" onchange="recalculate()" oninput="recalculate()"></td>
+        <td class="col-rate"><input type="number" id="rate-${id}" value="${rate || ''}" min="0" step="0.01" placeholder="0.00" onchange="recalculate()" oninput="recalculate()"></td>
+        <td class="col-total" id="total-${id}" style="padding:10px;font-weight:600;">$0.00</td>
+        <td class="col-action"><button class="btn btn-danger" onclick="removeLine(${id})">Remove</button></td>
+    `;
+    tbody.appendChild(tr);
+    recalculate();
+}
+
+function removeLine(id) {
+    const row = document.getElementById('line-' + id);
+    if (row) row.remove();
+    recalculate();
+}
+
+function recalculate() {
+    let subtotal = 0;
+    const rows = document.querySelectorAll('#line-items-body tr');
+    rows.forEach(row => {
+        const id = row.id.replace('line-', '');
+        const qty = parseFloat(document.getElementById('qty-' + id)?.value) || 0;
+        const rate = parseFloat(document.getElementById('rate-' + id)?.value) || 0;
+        const total = qty * rate;
+        const totalCell = document.getElementById('total-' + id);
+        if (totalCell) totalCell.textContent = '$' + total.toFixed(2);
+        subtotal += total;
+    });
+
+    const taxRate = parseFloat(document.getElementById('tax-rate').value) || 0;
+    const taxAmount = subtotal * (taxRate / 100);
+    const grandTotal = subtotal + taxAmount;
+
+    document.getElementById('subtotal').textContent = '$' + subtotal.toFixed(2);
+    document.getElementById('tax-amount').textContent = '$' + taxAmount.toFixed(2);
+    document.getElementById('grand-total').textContent = '$' + grandTotal.toFixed(2);
+}
+
+function loadCompanyDefaults() {
+    const saved = localStorage.getItem('quotecraft-company');
+    if (saved) {
+        const data = JSON.parse(saved);
+        if (data.name) document.getElementById('company-name').value = data.name;
+        if (data.phone) document.getElementById('company-phone').value = data.phone;
+        if (data.email) document.getElementById('company-email').value = data.email;
+        if (data.license) document.getElementById('company-license').value = data.license;
+        if (data.address) document.getElementById('company-address').value = data.address;
+    }
+}
+
+function saveCompanyDefaults() {
+    const data = {
+        name: document.getElementById('company-name').value,
+        phone: document.getElementById('company-phone').value,
+        email: document.getElementById('company-email').value,
+        license: document.getElementById('company-license').value,
+        address: document.getElementById('company-address').value
+    };
+    localStorage.setItem('quotecraft-company', JSON.stringify(data));
+}
+
+function getLineItems() {
+    const items = [];
+    const rows = document.querySelectorAll('#line-items-body tr');
+    rows.forEach(row => {
+        const id = row.id.replace('line-', '');
+        const desc = document.getElementById('desc-' + id)?.value || '';
+        const qty = parseFloat(document.getElementById('qty-' + id)?.value) || 0;
+        const rate = parseFloat(document.getElementById('rate-' + id)?.value) || 0;
+        if (desc.trim()) {
+            items.push({ desc, qty, rate, total: qty * rate });
+        }
+    });
+    return items;
+}
+
+function generatePDF() {
+    const { jsPDF } = window.jspdf;
+
+    // Validate required fields
+    const companyName = document.getElementById('company-name').value.trim();
+    const customerName = document.getElementById('customer-name').value.trim();
+    const proposalTitle = document.getElementById('proposal-title').value.trim();
+
+    if (!companyName || !customerName || !proposalTitle) {
+        alert('Please fill in Company Name, Customer Name, and Job Title.');
+        return;
+    }
+
+    // Save company info for next time
+    saveCompanyDefaults();
+
+    // Gather data
+    const companyPhone = document.getElementById('company-phone').value;
+    const companyEmail = document.getElementById('company-email').value;
+    const companyLicense = document.getElementById('company-license').value;
+    const companyAddress = document.getElementById('company-address').value;
+
+    const customerPhone = document.getElementById('customer-phone').value;
+    const customerEmail = document.getElementById('customer-email').value;
+    const customerAddress = document.getElementById('customer-address').value;
+
+    const proposalNumber = document.getElementById('proposal-number').value || 'QC-001';
+    const proposalDate = document.getElementById('proposal-date').value;
+    const validDays = document.getElementById('proposal-valid').value || '30';
+    const trade = document.getElementById('proposal-trade').value;
+    const scope = document.getElementById('proposal-scope').value;
+    const terms = document.getElementById('terms').value;
+    const notes = document.getElementById('notes').value;
+    const taxRate = parseFloat(document.getElementById('tax-rate').value) || 0;
+
+    const lineItems = getLineItems();
+    const subtotal = lineItems.reduce((sum, item) => sum + item.total, 0);
+    const taxAmount = subtotal * (taxRate / 100);
+    const grandTotal = subtotal + taxAmount;
+
+    // Create PDF
+    const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const margin = 20;
+    let y = 20;
+
+    // Header - Company Name
+    doc.setFontSize(22);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(26, 86, 219); // Primary blue
+    doc.text(companyName.toUpperCase(), margin, y);
+    y += 8;
+
+    // Company details line
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(100, 116, 139);
+    const companyDetails = [companyAddress, companyPhone, companyEmail, companyLicense ? 'Lic# ' + companyLicense : ''].filter(Boolean).join('  |  ');
+    doc.text(companyDetails, margin, y);
+    y += 4;
+
+    // Divider
+    doc.setDrawColor(26, 86, 219);
+    doc.setLineWidth(1.5);
+    doc.line(margin, y, pageWidth - margin, y);
+    y += 12;
+
+    // PROPOSAL title + number
+    doc.setFontSize(16);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(30, 41, 59);
+    doc.text('PROPOSAL', margin, y);
+
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(100, 116, 139);
+    doc.text('#' + proposalNumber, margin + doc.getTextWidth('PROPOSAL  '), y);
+
+    // Date on right
+    const formattedDate = proposalDate ? new Date(proposalDate + 'T12:00:00').toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : '';
+    doc.text(formattedDate, pageWidth - margin, y, { align: 'right' });
+    y += 14;
+
+    // Two-column: Customer info + Job info
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(100, 116, 139);
+    doc.text('PREPARED FOR', margin, y);
+    doc.text('PROJECT DETAILS', pageWidth / 2 + 10, y);
+    y += 6;
+
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(30, 41, 59);
+    doc.setFontSize(11);
+    doc.text(customerName, margin, y);
+    doc.text(proposalTitle, pageWidth / 2 + 10, y);
+    y += 5;
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    doc.setTextColor(100, 116, 139);
+    if (customerAddress) { doc.text(customerAddress, margin, y); y += 4; }
+    else { y += 4; }
+
+    const rightY = y - 4;
+    doc.text('Trade: ' + trade, pageWidth / 2 + 10, rightY);
+
+    if (customerPhone) { doc.text(customerPhone, margin, y); y += 4; }
+    if (customerEmail) { doc.text(customerEmail, margin, y); y += 4; }
+
+    doc.text('Valid until: ' + (proposalDate ? new Date(new Date(proposalDate + 'T12:00:00').getTime() + validDays * 86400000).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : validDays + ' days'), pageWidth / 2 + 10, rightY + 4);
+
+    y += 8;
+
+    // Scope of Work
+    if (scope) {
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(30, 41, 59);
+        doc.text('SCOPE OF WORK', margin, y);
+        y += 6;
+
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(9);
+        doc.setTextColor(71, 85, 105);
+        const scopeLines = doc.splitTextToSize(scope, pageWidth - margin * 2);
+        doc.text(scopeLines, margin, y);
+        y += scopeLines.length * 4.5 + 8;
+    }
+
+    // Line Items Table
+    if (lineItems.length > 0) {
+        doc.autoTable({
+            startY: y,
+            head: [['Description', 'Qty', 'Unit Price', 'Total']],
+            body: lineItems.map(item => [
+                item.desc,
+                item.qty.toString(),
+                '$' + item.rate.toFixed(2),
+                '$' + item.total.toFixed(2)
+            ]),
+            theme: 'plain',
+            headStyles: {
+                fillColor: [241, 245, 249],
+                textColor: [100, 116, 139],
+                fontStyle: 'bold',
+                fontSize: 9,
+                cellPadding: 6
+            },
+            bodyStyles: {
+                textColor: [30, 41, 59],
+                fontSize: 9,
+                cellPadding: 6
+            },
+            columnStyles: {
+                0: { cellWidth: 80 },
+                1: { cellWidth: 20, halign: 'center' },
+                2: { cellWidth: 35, halign: 'right' },
+                3: { cellWidth: 35, halign: 'right', fontStyle: 'bold' }
+            },
+            margin: { left: margin, right: margin },
+            alternateRowStyles: { fillColor: [248, 250, 252] }
+        });
+
+        y = doc.lastAutoTable.finalY + 8;
+
+        // Totals
+        const totalsX = pageWidth - margin - 70;
+        doc.setFontSize(9);
+        doc.setTextColor(100, 116, 139);
+
+        doc.text('Subtotal:', totalsX, y);
+        doc.setTextColor(30, 41, 59);
+        doc.text('$' + subtotal.toFixed(2), pageWidth - margin, y, { align: 'right' });
+        y += 6;
+
+        if (taxRate > 0) {
+            doc.setTextColor(100, 116, 139);
+            doc.text('Tax (' + taxRate + '%):', totalsX, y);
+            doc.setTextColor(30, 41, 59);
+            doc.text('$' + taxAmount.toFixed(2), pageWidth - margin, y, { align: 'right' });
+            y += 6;
+        }
+
+        // Grand total with highlight
+        doc.setFillColor(26, 86, 219);
+        doc.roundedRect(totalsX - 5, y - 5, pageWidth - margin - totalsX + 5, 12, 2, 2, 'F');
+        doc.setFontSize(11);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(255, 255, 255);
+        doc.text('TOTAL:', totalsX, y + 3);
+        doc.text('$' + grandTotal.toFixed(2), pageWidth - margin, y + 3, { align: 'right' });
+        y += 20;
+    }
+
+    // Terms
+    if (terms) {
+        // Check if we need a new page
+        if (y > 240) { doc.addPage(); y = 20; }
+
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(30, 41, 59);
+        doc.text('TERMS & CONDITIONS', margin, y);
+        y += 6;
+
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(8);
+        doc.setTextColor(100, 116, 139);
+        const termsLines = doc.splitTextToSize(terms, pageWidth - margin * 2);
+        doc.text(termsLines, margin, y);
+        y += termsLines.length * 3.5 + 8;
+    }
+
+    // Notes
+    if (notes) {
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(30, 41, 59);
+        doc.text('NOTES', margin, y);
+        y += 6;
+
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(8);
+        doc.setTextColor(100, 116, 139);
+        const notesLines = doc.splitTextToSize(notes, pageWidth - margin * 2);
+        doc.text(notesLines, margin, y);
+        y += notesLines.length * 3.5 + 12;
+    }
+
+    // Signature lines
+    if (y > 240) { doc.addPage(); y = 20; }
+
+    y += 10;
+    doc.setDrawColor(200, 200, 200);
+    doc.setLineWidth(0.5);
+
+    // Customer signature
+    doc.line(margin, y + 20, margin + 70, y + 20);
+    doc.setFontSize(8);
+    doc.setTextColor(100, 116, 139);
+    doc.text('Customer Signature', margin, y + 26);
+    doc.text('Date: _______________', margin, y + 32);
+
+    // Contractor signature
+    doc.line(pageWidth / 2 + 10, y + 20, pageWidth / 2 + 80, y + 20);
+    doc.text('Contractor Signature', pageWidth / 2 + 10, y + 26);
+    doc.text('Date: _______________', pageWidth / 2 + 10, y + 32);
+
+    // Watermark (free tier)
+    doc.setFontSize(8);
+    doc.setTextColor(180, 180, 180);
+    doc.text('Generated with QuoteCraft — quotecraft.tools', pageWidth / 2, doc.internal.pageSize.getHeight() - 10, { align: 'center' });
+
+    // Download
+    const filename = 'Proposal-' + proposalNumber + '-' + customerName.replace(/\s+/g, '-') + '.pdf';
+    doc.save(filename);
+
+    // Track event
+    if (window.goatcounter) {
+        window.goatcounter.count({ path: '/pdf-generated', event: true });
+    }
+}
+</script>
+
+</body>
+</html>
