@@ -584,6 +584,19 @@
     </div>
 </main>
 
+<!-- Email Capture Banner -->
+<div id="emailBanner" style="background:linear-gradient(135deg,#1e40af,#3b82f6);color:white;padding:30px 20px;text-align:center;">
+    <div style="max-width:600px;margin:0 auto;">
+        <h2 style="font-size:1.3rem;margin-bottom:8px;">Get Contractor Tips & Tool Updates</h2>
+        <p style="font-size:0.95rem;opacity:0.9;margin-bottom:16px;">Join 100+ contractors getting weekly tips on winning more bids. Free forever.</p>
+        <form id="emailForm" style="display:flex;gap:8px;max-width:440px;margin:0 auto;" onsubmit="return captureEmail(event)">
+            <input type="email" id="captureEmail" placeholder="you@company.com" required style="flex:1;padding:12px 16px;border:none;border-radius:8px;font-size:1rem;">
+            <button type="submit" style="padding:12px 24px;background:#f59e0b;color:#000;border:none;border-radius:8px;font-weight:700;cursor:pointer;font-size:0.95rem;white-space:nowrap;">Subscribe</button>
+        </form>
+        <p id="emailSuccess" style="display:none;margin-top:12px;font-weight:600;">Thanks! You're on the list.</p>
+    </div>
+</div>
+
 <footer>
     <div class="container">
         <p>QuoteCraft &mdash; Free Contractor Proposal Generator</p>
@@ -1185,6 +1198,38 @@ function generatePDF() {
     // Track event
     if (window.goatcounter) {
         window.goatcounter.count({ path: '/pdf-generated', event: true });
+    }
+}
+
+// Email capture
+function captureEmail(e) {
+    e.preventDefault();
+    const email = document.getElementById('captureEmail').value;
+    if (!email) return false;
+
+    // Store locally
+    const emails = JSON.parse(localStorage.getItem('qc_emails') || '[]');
+    if (!emails.includes(email)) {
+        emails.push(email);
+        localStorage.setItem('qc_emails', JSON.stringify(emails));
+    }
+
+    // Hide form, show success
+    document.getElementById('emailForm').style.display = 'none';
+    document.getElementById('emailSuccess').style.display = 'block';
+
+    // Track
+    if (window.goatcounter) {
+        window.goatcounter.count({ path: '/email-signup', event: true });
+    }
+    return false;
+}
+
+// Hide banner if already subscribed
+if (localStorage.getItem('qc_emails')) {
+    const emails = JSON.parse(localStorage.getItem('qc_emails'));
+    if (emails.length > 0) {
+        document.getElementById('emailBanner').style.display = 'none';
     }
 }
 </script>
